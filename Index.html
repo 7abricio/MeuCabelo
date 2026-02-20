@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
+    <title>Meu Cabelo</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@200..800&display=swap');
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none; 
+        }
+        
+        .font-serif { font-family: 'Playfair Display', serif; }
+        
+        ::-webkit-scrollbar { display: none; }
+        * { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .smooth-scroll {
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+        }
+
+        .animate-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(15px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        .toast-enter {
+            animation: toastPopup 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes toastPopup {
+            0% { transform: translate(-50%, 10px) scale(0.8); opacity: 0; }
+            100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+        }
+
+        .perspective-container { perspective: 1200px; }
+        
+        .flip-card-enter {
+            animation: flipCardIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+        }
+        
+        .flip-card-exit {
+            animation: flipCardOut 0.4s cubic-bezier(0.6, -0.28, 0.735, 0.045) forwards;
+            transform-style: preserve-3d;
+            backface-visibility: hidden;
+        }
+
+        @keyframes flipCardIn {
+            0% { transform: rotateY(-90deg) scale(0.9); opacity: 0; }
+            100% { transform: rotateY(0deg) scale(1); opacity: 1; }
+        }
+        
+        @keyframes flipCardOut {
+            0% { transform: rotateY(0deg) scale(1); opacity: 1; }
+            100% { transform: rotateY(90deg) scale(0.9); opacity: 0; }
+        }
+
+        @media screen and (max-width: 768px) {
+            input, select, textarea { font-size: 16px !important; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, onSnapshot, query, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuração Firebase
+       const firebaseConfig = {
+  apiKey: "AIzaSyDrnF7VmdC1lIiaHdHZYreSToE1pREbTQA",
+  authDomain: "meu-cabelo-e01d3.firebaseapp.com",
+  databaseURL: "https://meu-cabelo-e01d3-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "meu-cabelo-e01d3",
+  storageBucket: "meu-cabelo-e01d3.firebasestorage.app",
+  messagingSenderId: "96173933626",
+  appId: "1:96173933626:web:321c1a2ea2527991a4e103"
+};
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'meu-cabelo-app';
+
+        const { useState, useEffect, useMemo, useRef } = React;
+
+        const getThemeColors = (isDark) => ({
+            bg: isDark ? 'bg-[#1C1A19]' : 'bg-[#F9F6F0]',
+            card: isDark ? 'bg-[#282624]' : 'bg-white',
+            surface: isDark ? 'bg-[#32302D]' : 'bg-stone-50',
+            surfaceHover: isDark ? 'hover:bg-[#3D3A36]' : 'hover:bg-stone-100',
+            surfaceAlt: isDark ? 'bg-[#3D3A36]' : 'bg-stone-100',
+            text: isDark ? 'text-[#D6D0C4]' : 'text-[#5C544E]',
+            textStrong: isDark ? 'text-[#F0EBE1]' : 'text-stone-700',
+            textMuted: isDark ? 'text-[#A39D93]' : 'text-stone-500',
+            textLight: isDark ? 'text-[#8A847A]' : 'text-[#9A8F85]',
+            iconMuted: isDark ? 'text-[#5A5550]' : 'text-stone-300',
+            primary: isDark ? 'bg-[#384A41]' : 'bg-[#D2E0D9]',
+            primaryText: isDark ? 'text-[#A5C2B3]' : 'text-[#4A6B5D]',
+            accent: isDark ? 'bg-[#5C3C3A]' : 'bg-[#F3D8D6]',
+            accentText: isDark ? 'text-[#DEAAA7]' : 'text-[#9C5A56]',
+            yellow: isDark ? 'bg-[#4A3D1A]' : 'bg-[#FDF3D8]',
+            yellowText: isDark ? 'text-[#E0BE63]' : 'text-[#B08922]',
+            blue: isDark ? 'bg-[#2C3E4F]' : 'bg-[#D6E4F0]',
+            blueText: isDark ? 'text-[#9CB8D4]' : 'text-[#4A6984]',
+            purple: isDark ? 'bg-[#3D2C4A]' : 'bg-[#E5D9F2]',
+            purpleText: isDark ? 'text-[#BCA3D4]' : 'text-[#7A5C8A]',
+            orange: isDark ? 'bg-[#5A3A22]' : 'bg-[#FFE5D4]',
+            orangeText: isDark ? 'text-[#ECA16A]' : 'text-[#C76A28]',
+            greenCard: isDark ? 'bg-[#2A402A]' : 'bg-[#E0F0E0]',
+            greenText: isDark ? 'text-[#7BB07B]' : 'text-[#3B7A3B]',
+            teal: isDark ? 'bg-[#214040]' : 'bg-[#E0F0E0]',
+            tealText: isDark ? 'text-[#5EB0B0]' : 'text-[#3B7A7A]',
+            emerald: isDark ? 'bg-[#20402E]' : 'bg-[#E0F0E6]',
+            emeraldText: isDark ? 'text-[#63B88A]' : 'text-[#3B7A55]',
+            border: isDark ? 'border-[#3D3A36]' : 'border-[#EAE3D9]',
+            bottomNav: isDark ? 'bg-[#282624]/90 border-[#3D3A36]' : 'bg-white/90 border-[#EAE3D9]',
+            input: isDark ? 'bg-[#1C1A19] text-[#D6D0C4]' : 'bg-white text-stone-700',
+            translucent: isDark ? 'bg-black/20' : 'bg-white/60',
+            translucentStrong: isDark ? 'bg-black/40' : 'bg-white/70',
+            notification: isDark ? 'bg-[#282624]/95 border-[#3D3A36]' : 'bg-white/95 border-stone-200',
+            indigoCard: isDark ? 'bg-indigo-900/20 border-indigo-900/50' : 'bg-indigo-50/30 border-indigo-100',
+            indigoText: isDark ? 'text-indigo-300' : 'text-indigo-900',
+            blueCard: isDark ? 'bg-blue-900/20 border-blue-900/50' : 'bg-blue-50/30 border-blue-100',
+            blueTextAlt: isDark ? 'text-blue-300' : 'text-blue-900',
+            purpleCard: isDark ? 'bg-purple-900/20 border-purple-900/50' : 'bg-[#E5D9F2] bg-opacity-30 border-purple-100',
+        });
+
+        const HAIR_STATUS = [
+            { id: 'danificado', icon: 'ph-warning-circle', color: 'text-orange-500', label: 'Danificado' },
+            { id: 'seco', icon: 'ph-wind', color: 'text-yellow-600', label: 'Seco / Frizz' },
+            { id: 'oleoso', icon: 'ph-drop-half', color: 'text-stone-400', label: 'Oleoso' },
+            { id: 'normal', icon: 'ph-smiley', color: 'text-yellow-400', label: 'Bom' },
+            { id: 'hidratado', icon: 'ph-drop', color: 'text-blue-400', label: 'Hidratado' },
+            { id: 'perfeito', icon: 'ph-sparkle', color: 'text-pink-400', label: 'Incrível' },
+        ];
+
+        const TREATMENT_TYPES = [
+            { id: 'hidratacao', label: '💧 Hidratação', val: 1 },
+            { id: 'nutricao', label: '🥑 Nutrição', val: 2 },
+            { id: 'reconstrucao', label: '🛡️ Reconstrução', val: 3 },
+            { id: 'detox', label: '🌿 Detox', val: 4 },
+        ];
+
+        const STAT_PERIODS = [
+            { val: 'ontem', label: 'Ontem' },
+            { val: 7, label: '7 D' },
+            { val: 15, label: '15 D' },
+            { val: 30, label: '30 D' },
+            { val: 60, label: '60 D' },
+            { val: 90, label: '90 D' }
+        ];
+
+        const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+
+        const getTodayStr = () => {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+
+        const formatTime = (date) => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+        const formatDateVisual = (dateStr) => {
+            if(!dateStr) return '';
+            const [y, m, d] = dateStr.split('-');
+            const date = new Date(y, m - 1, d);
+            return `${date.getDate()} de ${MONTHS[date.getMonth()]}, ${y}`;
+        };
+
+        const Button = ({ children, onClick, variant = 'primary', className = '', colors }) => {
+            const variants = {
+                primary: `${colors.primary} ${colors.primaryText} hover:brightness-110`,
+                accent: `${colors.accent} ${colors.accentText} hover:brightness-110`,
+                purple: `${colors.purple} ${colors.purpleText} hover:brightness-110`,
+                blue: `${colors.blue} ${colors.blueText} hover:brightness-110`,
+                orange: `${colors.orange} ${colors.orangeText} hover:brightness-110`,
+                teal: `${colors.teal} ${colors.tealText} hover:brightness-110`,
+                emerald: `${colors.emerald} ${colors.emeraldText} hover:brightness-110`,
+                outline: `border-2 ${colors.border} ${colors.text} ${colors.surfaceHover}`,
+            };
+            return <button type="button" onClick={onClick} className={`px-4 py-2 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 ${variants[variant]} ${className}`}>{children}</button>;
+        };
+
+        const Card = ({ children, className = '', colors, onClick }) => (
+            <div onClick={onClick} className={`${colors.card} rounded-3xl p-6 shadow-sm border ${colors.border} transition-transform duration-300 ${onClick ? 'cursor-pointer hover:scale-[1.02] hover:shadow-md' : ''} ${className}`}>{children}</div>
+        );
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [isDarkMode, setIsDarkMode] = useState(false);
+            const colors = useMemo(() => getThemeColors(isDarkMode), [isDarkMode]);
+            const toggleTheme = () => setIsDarkMode(!isDarkMode);
+
+            const [currentUsername, setCurrentUsername] = useState(null);
+            const [authStep, setAuthStep] = useState('auth'); 
+            const [isLoginFlow, setIsLoginFlow] = useState(true);
+            const [userName, setUserName] = useState('');
+            const [isEditingName, setIsEditingName] = useState(false);
+            const [editNameInput, setEditNameInput] = useState('');
+
+            const [usernameInput, setUsernameInput] = useState('');
+            const [passwordInput, setPasswordInput] = useState('');
+            const [securityAnswerInput, setSecurityAnswerInput] = useState('');
+
+            const [activeTab, setActiveTab] = useState('home');
+            const [realTodayStr, setRealTodayStr] = useState(getTodayStr());
+            const [activeDateStr, setActiveDateStr] = useState(getTodayStr()); 
+            const [isNavOpen, setIsNavOpen] = useState(false);
+            const navTouchStartY = useRef(0);
+            const isNavDragging = useRef(false);
+            
+            const [activeStatModal, setActiveStatModal] = useState(null);
+            const [isClosingModal, setIsClosingModal] = useState(false);
+            const [statusFeedback, setStatusFeedback] = useState(null);
+            const statusTimeoutRef = useRef(null);
+
+            const [logs, setLogs] = useState({});
+            const [products, setProducts] = useState([]);
+            const [notifications, setNotifications] = useState([]);
+
+            const [extraInput, setExtraInput] = useState({ type: '', duration: '' });
+            const [salonInput, setSalonInput] = useState({ procedures: '', notes: '', mood: 'perfeito' });
+            const [isAddingProduct, setIsAddingProduct] = useState(false);
+            const [newProductInput, setNewProductInput] = useState({ name: '', time: '08:00' });
+            const [statsPeriod, setStatsPeriod] = useState(15);
+            const [viewingMonth, setViewingMonth] = useState(new Date());
+            const [selectedHistoryDate, setSelectedHistoryDate] = useState(getTodayStr());
+
+            // 1. Inicializar Firebase Auth
+            useEffect(() => {
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                };
+                initAuth();
+                const unsubscribe = onAuthStateChanged(auth, setUser);
+                return () => unsubscribe();
+            }, []);
+
+            // 2. Sincronizar dados do Firestore para o utilizador logado
+            useEffect(() => {
+                if (!user || !currentUsername) return;
+
+                // Listener para Produtos
+                const productsCol = collection(db, 'artifacts', appId, 'users', user.uid, 'products');
+                const unsubProducts = onSnapshot(productsCol, (snapshot) => {
+                    const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    setProducts(prods);
+                }, (err) => console.error("Erro produtos:", err));
+
+                // Listener para Logs
+                const logsCol = collection(db, 'artifacts', appId, 'users', user.uid, 'logs');
+                const unsubLogs = onSnapshot(logsCol, (snapshot) => {
+                    const allLogs = {};
+                    snapshot.docs.forEach(doc => { allLogs[doc.id] = doc.data(); });
+                    setLogs(allLogs);
+                }, (err) => console.error("Erro logs:", err));
+
+                return () => { unsubProducts(); unsubLogs(); };
+            }, [user, currentUsername]);
+
+            const addNotification = (msg) => {
+                const id = Date.now();
+                setNotifications(prev => [...prev, { id, msg }]);
+                setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 4000);
+            };
+
+            const handleAuthSubmit = async () => {
+                if (!user) return addNotification("Sistema a carregar...");
+                if (!usernameInput || !passwordInput) return addNotification("Preencha utilizador e palavra-passe!");
+                
+                const userKey = usernameInput.toLowerCase().trim();
+                const userRegistryRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', userKey);
+
+                if (isLoginFlow) {
+                    const docSnap = await getDoc(userRegistryRef);
+                    if (docSnap.exists() && docSnap.data().password === passwordInput) {
+                        setCurrentUsername(userKey);
+                        setUserName(docSnap.data().name);
+                        setAuthStep('app');
+                        setActiveTab('home');
+                        setIsNavOpen(false);
+                    } else {
+                        addNotification("Utilizador ou palavra-passe incorretos!");
+                    }
+                } else {
+                    const docSnap = await getDoc(userRegistryRef);
+                    if (docSnap.exists()) return addNotification("Este utilizador já existe!");
+                    setAuthStep('onboarding');
+                }
+            };
+
+            const handleOnboardingSubmit = async () => {
+                if (!userName.trim() || !securityAnswerInput.trim()) return addNotification("Por favor, preencha todos os campos!");
+                const userKey = usernameInput.toLowerCase().trim();
+                
+                try {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userKey), {
+                        name: userName.trim(),
+                        password: passwordInput,
+                        securityAnswer: securityAnswerInput.toLowerCase().trim(),
+                        uid: user.uid
+                    });
+                    setCurrentUsername(userKey);
+                    setAuthStep('app');
+                    setActiveTab('home');
+                    setIsNavOpen(false);
+                } catch (e) {
+                    addNotification("Erro ao criar conta.");
+                }
+            };
+
+            const handleRecoverySubmit = async () => {
+                const userKey = usernameInput.toLowerCase().trim();
+                const docSnap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', userKey));
+                
+                if (docSnap.exists() && docSnap.data().securityAnswer === securityAnswerInput.toLowerCase().trim()) {
+                    addNotification(`A sua palavra-passe é: ${docSnap.data().password}`);
+                    setTimeout(() => setAuthStep('auth'), 4000);
+                } else {
+                    addNotification("Utilizador ou resposta incorretos.");
+                }
+            };
+
+            const getSafeDayLog = (dateStr) => {
+                const log = logs[dateStr] || {};
+                return {
+                    status: log.status || [],
+                    treatment: log.treatment || { minutes: 0, type: '' },
+                    routine: log.routine || {},
+                    heat: log.heat || { active: false, protectant: false },
+                    salon: log.salon || null,
+                    extras: log.extras || []
+                };
+            };
+
+            const updateActiveLog = async (key, value) => {
+                if (!user) return;
+                const safeLog = getSafeDayLog(activeDateStr);
+                const logRef = doc(db, 'artifacts', appId, 'users', user.uid, 'logs', activeDateStr);
+                await setDoc(logRef, { ...safeLog, [key]: value });
+            };
+
+            const handleAddProduct = async () => {
+                if (!user) return;
+                if (newProductInput.name) {
+                    const prodId = Date.now().toString();
+                    await setDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'products', prodId), {
+                        name: newProductInput.name,
+                        time: newProductInput.time
+                    });
+                    setNewProductInput({ name: '', time: '08:00' });
+                    setIsAddingProduct(false);
+                } else addNotification("Preencha o nome do produto!");
+            };
+
+            const handleDeleteProduct = async (id) => {
+                await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'products', id));
+            };
+
+            const handleSaveName = async () => {
+                if(editNameInput.trim()) {
+                    setUserName(editNameInput.trim());
+                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUsername), { name: editNameInput.trim() });
+                }
+                setIsEditingName(false);
+            };
+
+            const handleLogout = () => {
+                setAuthStep('auth'); setIsLoginFlow(true); setCurrentUsername(null);
+            };
+
+            const handleStatusSelect = (s) => {
+                const dayLog = getSafeDayLog(activeDateStr);
+                updateActiveLog('status', [...dayLog.status, {time: formatTime(new Date()), status: s.id}]);
+                setStatusFeedback(s.label);
+                if (statusTimeoutRef.current) clearTimeout(statusTimeoutRef.current);
+                statusTimeoutRef.current = setTimeout(() => { setStatusFeedback(null); }, 2000);
+            };
+
+            // Touch/Nav Handlers
+            const handleNavTouchStart = (e) => { navTouchStartY.current = e.touches[0].clientY; isNavDragging.current = false; };
+            const handleNavTouchMove = (e) => { if (Math.abs(e.touches[0].clientY - navTouchStartY.current) > 10) isNavDragging.current = true; };
+            const handleNavTouchEnd = (e) => {
+                if (!isNavDragging.current) return;
+                const deltaY = e.changedTouches[0].clientY - navTouchStartY.current;
+                if (deltaY < -15) setIsNavOpen(true); else if (deltaY > 15) setIsNavOpen(false);
+            };
+            const handleNavClick = (e) => { e.stopPropagation(); if (isNavDragging.current) { isNavDragging.current = false; return; } setIsNavOpen(prev => !prev); };
+
+            const dayLog = getSafeDayLog(activeDateStr);
+            const TABS_ORDER = ['home', 'calendar', 'stats'];
+            const activeIndex = TABS_ORDER.indexOf(activeTab);
+
+            const stats = useMemo(() => {
+                const today = new Date();
+                let totalTreatMins = 0, treatDays = 0, productUsed = 0, productTotal = 0;
+                let heatDays = 0, protectedDays = 0, totalSalon = 0, totalExtrasMins = 0;
+                let countCorte = 0, countCor = 0, countEscova = 0;
+                const statusCounts = {}, salonMoodCounts = {};
+                const startDay = statsPeriod === 'ontem' ? 1 : 0;
+                const endDay = statsPeriod === 'ontem' ? 1 : statsPeriod - 1;
+
+                for (let i = startDay; i <= endDay; i++) {
+                    const d = new Date(today); d.setDate(d.getDate() - i);
+                    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    const l = logs[dateStr];
+                    if (l) {
+                        if (l.treatment?.minutes) { totalTreatMins += l.treatment.minutes; treatDays++; }
+                        products.forEach(p => { productTotal++; if (l.routine?.[p.id]) productUsed++; });
+                        if (l.heat?.active) { heatDays++; if (l.heat.protectant) protectedDays++; }
+                        l.extras?.forEach(ex => { totalExtrasMins += ex.duration; });
+                        if (l.salon?.procedures) {
+                            totalSalon++;
+                            const pText = l.salon.procedures.toLowerCase();
+                            if (pText.includes('cort') || pText.includes('apar')) countCorte++;
+                            if (pText.includes('pint') || pText.includes('cor')) countCor++;
+                            if (pText.includes('escov')) countEscova++;
+                            if (l.salon.mood) salonMoodCounts[l.salon.mood] = (salonMoodCounts[l.salon.mood] || 0) + 1;
+                        }
+                        l.status?.forEach(m => { statusCounts[m.status] = (statusCounts[m.status] || 0) + 1; });
+                    }
+                }
+                const avgTreat = treatDays ? Math.round(totalTreatMins / treatDays) : 0;
+                const routineAdherence = productTotal ? Math.round((productUsed / productTotal) * 100) : 0;
+                const topStatusId = Object.keys(statusCounts).sort((a,b) => statusCounts[b] - statusCounts[a])[0];
+                const topStatus = HAIR_STATUS.find(m => m.id === topStatusId) || HAIR_STATUS.find(m => m.id === 'normal'); 
+                const topSalonMoodId = Object.keys(salonMoodCounts).sort((a,b) => salonMoodCounts[b] - salonMoodCounts[a])[0];
+                const topSalonMood = HAIR_STATUS.find(m => m.id === topSalonMoodId) || null;
+                return { avgTreat, totalTreatMins, routineAdherence, heatDays, protectedDays, totalSalon, countCorte, countCor, countEscova, totalExtrasMins, topStatus, topSalonMood };
+            }, [statsPeriod, logs, products]);
+
+            const getInsightFor = (type) => {
+                switch(type) {
+                    case 'status': return "Mantenha o acompanhamento para ver padrões de saúde nos seus fios.";
+                    case 'routine': return stats.routineAdherence > 80 ? "Disciplina de ferro!" : "Tente manter a constância nos produtos diários.";
+                    case 'treatment': return stats.totalTreatMins > 0 ? "O cronograma é a chave para o brilho." : "Não se esqueça de hidratar esta semana.";
+                    case 'heat': return stats.heatDays === 0 ? "Ótimo! Fios a descansar do calor." : "Proteja sempre os fios antes do secador.";
+                    case 'salon': return "Visitas regulares ao salão mantêm o corte saudável.";
+                    default: return "Continue a registar a sua jornada.";
+                }
+            };
+
+            const openModal = (type, title, icon, bgColor, iconColor, value, valColor) => {
+                setActiveStatModal({ type, title, icon, bgColor, iconColor, value, valColor, insight: getInsightFor(type) });
+            };
+
+            const closeModal = () => { setIsClosingModal(true); setTimeout(() => { setActiveStatModal(null); setIsClosingModal(false); }, 350); };
+
+            const TabHeader = ({ titleContent, showOptions = false }) => (
+                <div className="flex justify-between items-start mb-6">
+                    <div className="flex-1">{titleContent}</div>
+                    <div className={`flex items-center gap-2 ml-4 transition-opacity ${showOptions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                        <button onClick={toggleTheme} className={`${colors.yellow} p-3 rounded-full shadow-sm`}>
+                            <i className={`ph-fill ${isDarkMode ? 'ph-moon' : 'ph-sun'} ${colors.yellowText} text-xl`}></i>
+                        </button>
+                        <button onClick={handleLogout} className={`${colors.card} border ${colors.border} p-3 rounded-full text-red-400 shadow-sm`}>
+                            <i className="ph-bold ph-sign-out text-xl"></i>
+                        </button>
+                    </div>
+                </div>
+            );
+
+            const currentYear = viewingMonth.getFullYear();
+            const currentMonthIndex = viewingMonth.getMonth();
+            const daysInMonth = new Date(currentYear, currentMonthIndex + 1, 0).getDate();
+            const firstDayOfWeek = new Date(currentYear, currentMonthIndex, 1).getDay();
+            const monthDays = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+            if (authStep === 'auth') {
+                return (
+                    <div className={`min-h-[100dvh] w-full ${colors.bg} flex items-center justify-center p-4 transition-colors`}>
+                        <div className={`max-w-md w-full relative ${colors.bg} shadow-2xl flex flex-col rounded-[2.5rem] border ${colors.border}`}>
+                            <div className="p-8 flex flex-col items-center text-center space-y-6">
+                                <div className="mt-8">
+                                    <div className={`w-24 h-24 mx-auto mb-4 rounded-full ${colors.primary} flex items-center justify-center`}>
+                                        <i className={`ph-fill ph-flower-lotus ${colors.primaryText} text-5xl`}></i>
+                                    </div>
+                                    <h1 className={`text-4xl font-black ${colors.text} font-serif`}>Meu Cabelo</h1>
+                                </div>
+                                <div className="w-full space-y-4">
+                                    <div className="flex w-full mb-6 p-1 bg-black/5 dark:bg-white/5 rounded-2xl">
+                                        <button onClick={() => setIsLoginFlow(true)} className={`flex-1 py-2 rounded-xl text-sm font-bold ${isLoginFlow ? colors.card + ' shadow-sm ' + colors.textStrong : colors.textMuted}`}>Entrar</button>
+                                        <button onClick={() => setIsLoginFlow(false)} className={`flex-1 py-2 rounded-xl text-sm font-bold ${!isLoginFlow ? colors.card + ' shadow-sm ' + colors.textStrong : colors.textMuted}`}>Registo</button>
+                                    </div>
+                                    <input type="text" placeholder="Utilizador" value={usernameInput} onChange={e => setUsernameInput(e.target.value)} className={`w-full px-4 py-3 rounded-2xl border ${colors.border} ${colors.input}`} />
+                                    <input type="password" placeholder="Palavra-passe" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} className={`w-full px-4 py-3 rounded-2xl border ${colors.border} ${colors.input}`} />
+                                </div>
+                                <Button colors={colors} variant="primary" onClick={handleAuthSubmit} className="w-full py-4">{isLoginFlow ? 'Entrar' : 'Criar Conta'}</Button>
+                                {isLoginFlow && <button onClick={() => setAuthStep('recovery')} className={`text-xs font-bold ${colors.primaryText} hover:underline`}>Esqueceu a palavra-passe?</button>}
+                            </div>
+                        </div>
+                        <div className="absolute top-4 w-full px-4 z-50 flex flex-col gap-2 max-w-md">
+                            {notifications.map(n => <div key={n.id} className={`${colors.notification} p-4 rounded-2xl flex items-center shadow-lg border animate-in`}><i className="ph-fill ph-info text-blue-500 mr-2"></i><p className={`font-bold ${colors.textStrong} text-sm`}>{n.msg}</p></div>)}
+                        </div>
+                    </div>
+                );
+            }
+
+            if (authStep === 'onboarding') {
+                return (
+                    <div className={`min-h-[100dvh] w-full ${colors.bg} flex items-center justify-center p-4`}>
+                        <div className={`max-w-md w-full ${colors.bg} shadow-2xl rounded-[2.5rem] border ${colors.border} p-8 text-center`}>
+                            <h1 className={`text-2xl font-bold ${colors.text} font-serif mb-8`}>Como devemos chamar-lhe?</h1>
+                            <input type="text" placeholder="O seu nome" value={userName} onChange={e => setUserName(e.target.value)} className={`w-full px-4 py-3 rounded-2xl border ${colors.border} ${colors.input} mb-4`} />
+                            <input type="text" placeholder="Nome da sua avó (Recuperação)" value={securityAnswerInput} onChange={e => setSecurityAnswerInput(e.target.value)} className={`w-full px-4 py-3 rounded-2xl border ${colors.border} ${colors.input} mb-8`} />
+                            <Button colors={colors} variant="primary" onClick={handleOnboardingSubmit} className="w-full py-4">Começar</Button>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (authStep === 'recovery') {
+                return (
+                    <div className={`min-h-[100dvh] w-full ${colors.bg} flex items-center justify-center p-4`}>
+                        <div className={`max-w-md w-full ${colors.bg} shadow-2xl rounded-[2.5rem] border ${colors.border} p-8 text-center`}>
+                            <h1 className={`text-2xl font-bold ${colors.text} font-serif mb-6`}>Recuperar Acesso</h1>
+                            <input type="text" placeholder="Utilizador" value={usernameInput} onChange={e => setUsernameInput(e.target.value)} className={`w-full px-4 py-3 rounded-2xl border ${colors.border} ${colors.input} mb-4`} />
+                            <input type="text" placeholder="Nome da sua avó?" value={securityAnswerInput} onChange={e => setSecurityAnswerInput(e.target.value)} className={`w-full px-4 py-3 rounded-2xl border ${colors.border} ${colors.input} mb-8`} />
+                            <Button colors={colors} variant="primary" onClick={handleRecoverySubmit} className="w-full py-4">Recuperar</Button>
+                            <button onClick={() => setAuthStep('auth')} className="mt-4 text-sm text-stone-500">Voltar</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className={`h-[100dvh] w-full ${colors.bg} transition-colors duration-500 overflow-hidden relative`}>
+                    
+                    {activeStatModal && (
+                        <div className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm transition-opacity perspective-container" onClick={closeModal}>
+                            <div className={`w-full max-w-[320px] ${colors.card} rounded-[2.5rem] p-8 shadow-2xl border ${colors.border} ${isClosingModal ? 'flip-card-exit' : 'flip-card-enter'} flex flex-col items-center text-center`} onClick={e => e.stopPropagation()}>
+                                <button onClick={closeModal} className="absolute top-5 right-5 text-stone-400 p-1"><i className="ph-bold ph-x text-xl"></i></button>
+                                <div className={`p-5 rounded-full ${activeStatModal.bgColor} mb-4`}><i className={`ph-fill ${activeStatModal.icon} ${activeStatModal.iconColor} text-5xl`}></i></div>
+                                <h2 className={`text-2xl font-bold ${colors.text} font-serif mb-1`}>{activeStatModal.title}</h2>
+                                <p className={`text-4xl font-black ${activeStatModal.valColor} mb-6`}>{activeStatModal.value}</p>
+                                <div className={`${colors.surface} p-4 rounded-3xl w-full`}><p className={`text-sm font-medium ${colors.textStrong}`}>{activeStatModal.insight}</p></div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="max-w-md mx-auto h-full relative flex flex-col">
+                        <div className="flex-1 w-full relative overflow-hidden">
+                            <div className="w-[300%] h-full flex transition-transform duration-500" style={{ transform: `translateX(-${activeIndex * (100 / 3)}%)` }}>
+                                
+                                {/* ABA: HOJE */}
+                                <div className="w-1/3 h-full overflow-y-auto smooth-scroll p-6 pb-40">
+                                    <TabHeader showOptions={activeIndex === 0} titleContent={
+                                        <>
+                                            <p className={`text-xs ${colors.textLight} font-bold`}>{formatDateVisual(activeDateStr)}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                {isEditingName ? (
+                                                    <div className="flex items-center gap-1"><input autoFocus value={editNameInput} onChange={e => setEditNameInput(e.target.value)} className="bg-transparent border-b border-stone-300 outline-none text-2xl font-bold font-serif w-32" /><button onClick={handleSaveName} className="text-green-500"><i className="ph-bold ph-check"></i></button></div>
+                                                ) : (
+                                                    <h1 className={`text-3xl font-bold ${colors.text} font-serif`}>Olá, {userName}! <button onClick={() => { setEditNameInput(userName); setIsEditingName(true); }} className="text-sm opacity-30"><i className="ph-bold ph-pencil"></i></button></h1>
+                                                )}
+                                            </div>
+                                        </>
+                                    }/>
+                                    
+                                    <div className="space-y-6">
+                                        <Card colors={colors}>
+                                            <h3 className={`font-bold mb-4 ${colors.text}`}>Estado dos fios</h3>
+                                            <div className="flex flex-wrap justify-center gap-4 p-4 rounded-2xl bg-stone-50 dark:bg-stone-900/50 mb-4">
+                                                {HAIR_STATUS.map(s => <button key={s.id} onClick={() => handleStatusSelect(s)} className={`hover:scale-125 transition-transform ${s.color}`}><i className={`ph-fill ${s.icon} text-3xl`}></i></button>)}
+                                            </div>
+                                            {dayLog.status.map((s, i) => {
+                                                const meta = HAIR_STATUS.find(x => x.id === s.status);
+                                                return <div key={i} className="flex items-center justify-between mb-2 text-sm"><span className="flex items-center gap-2"><i className={`ph-fill ${meta.icon} ${meta.color}`}></i> {meta.label}</span><span className="opacity-50">{s.time}</span></div>
+                                            })}
+                                        </Card>
+
+                                        <Card colors={colors}>
+                                            <div className="flex justify-between items-center mb-4"><h3 className="font-bold">Produtos Diários</h3><button onClick={() => setIsAddingProduct(!isAddingProduct)}><i className="ph-bold ph-plus"></i></button></div>
+                                            {isAddingProduct && (
+                                                <div className="mb-4 space-y-2"><input placeholder="Nome" value={newProductInput.name} onChange={e => setNewProductInput({...newProductInput, name: e.target.value})} className={`w-full p-2 rounded-xl ${colors.input}`} /><Button colors={colors} variant="blue" onClick={handleAddProduct} className="w-full">Adicionar</Button></div>
+                                            )}
+                                            {products.map(p => {
+                                                const isUsed = dayLog.routine?.[p.id];
+                                                return (
+                                                    <div key={p.id} className="flex items-center justify-between p-3 border rounded-xl mb-2">
+                                                        <span>{p.name}</span>
+                                                        <div className="flex gap-2">
+                                                            <button onClick={() => handleDeleteProduct(p.id)} className="text-red-400"><i className="ph-bold ph-trash"></i></button>
+                                                            <button onClick={() => { const r = {...dayLog.routine}; r[p.id] = !r[p.id]; updateActiveLog('routine', r); }} className={`w-8 h-8 rounded-full border ${isUsed ? 'bg-green-500 border-transparent text-white' : ''}`}><i className="ph-bold ph-check"></i></button>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </Card>
+
+                                        <Card colors={colors}>
+                                            <h3 className="font-bold mb-4">Máscara / Calor</h3>
+                                            <div className="space-y-4">
+                                                <input type="range" min="0" max="60" value={dayLog.treatment.minutes} onChange={e => updateActiveLog('treatment', { ...dayLog.treatment, minutes: parseInt(e.target.value) })} className="w-full" />
+                                                <p className="text-center text-sm font-bold">{dayLog.treatment.minutes} minutos</p>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => updateActiveLog('heat', { ...dayLog.heat, active: !dayLog.heat.active })} className={`flex-1 p-3 rounded-xl border ${dayLog.heat.active ? 'bg-orange-100 border-orange-400 text-orange-600' : ''}`}>Calor</button>
+                                                    {dayLog.heat.active && <button onClick={() => updateActiveLog('heat', { ...dayLog.heat, protectant: !dayLog.heat.protectant })} className={`flex-1 p-3 rounded-xl border ${dayLog.heat.protectant ? 'bg-green-100 border-green-400 text-green-600' : ''}`}>Protetor</button>}
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    </div>
+                                </div>
+
+                                {/* ABA: HISTÓRICO */}
+                                <div className="w-1/3 h-full overflow-y-auto p-6 pb-40">
+                                    <TabHeader titleContent={<h1 className="text-3xl font-bold font-serif">Histórico</h1>} />
+                                    <Card colors={colors}>
+                                        <div className="grid grid-cols-7 text-center gap-1">
+                                            {monthDays.map(d => {
+                                                const dateStr = `${currentYear}-${String(currentMonthIndex+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                                                const hasData = logs[dateStr];
+                                                return <button key={d} onClick={() => setSelectedHistoryDate(dateStr)} className={`p-2 rounded-xl text-sm ${selectedHistoryDate === dateStr ? 'bg-stone-800 text-white' : ''} ${hasData ? 'font-black' : 'opacity-40'}`}>{d}</button>
+                                            })}
+                                        </div>
+                                    </Card>
+                                    <div className="mt-6">
+                                        <h3 className="font-bold mb-4">{formatDateVisual(selectedHistoryDate)}</h3>
+                                        {logs[selectedHistoryDate] ? <pre className="text-xs opacity-60">Registo existente. Clique em hoje para editar.</pre> : <p className="text-sm opacity-40">Sem registos.</p>}
+                                    </div>
+                                </div>
+
+                                {/* ABA: STATS */}
+                                <div className="w-1/3 h-full overflow-y-auto p-6 pb-40">
+                                    <TabHeader titleContent={<h1 className="text-3xl font-bold font-serif">Resumo</h1>} />
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Card onClick={() => openModal('status', 'Estado', 'ph-smiley', 'bg-yellow-100', 'text-yellow-600', stats.topStatus.label, 'text-stone-800')} colors={colors} className="col-span-2 flex justify-between items-center">
+                                            <div><p className="text-xs opacity-50 font-bold">PREDOMINANTE</p><h2 className="text-xl font-bold">{stats.topStatus.label}</h2></div>
+                                            <i className={`ph-fill ${stats.topStatus.icon} text-4xl ${stats.topStatus.color}`}></i>
+                                        </Card>
+                                        <Card colors={colors} className="flex flex-col items-center">
+                                            <i className="ph-fill ph-drop text-blue-400 text-3xl mb-2"></i>
+                                            <p className="text-xl font-bold">{stats.routineAdherence}%</p>
+                                            <p className="text-[10px] opacity-50">ROTINA</p>
+                                        </Card>
+                                        <Card colors={colors} className="flex flex-col items-center">
+                                            <i className="ph-fill ph-fire text-orange-400 text-3xl mb-2"></i>
+                                            <p className="text-xl font-bold">{stats.heatDays}d</p>
+                                            <p className="text-[10px] opacity-50">CALOR</p>
+                                        </Card>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        {/* NAV ISLAND */}
+                        <div 
+                            className={`absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-[340px] flex flex-col items-center ${colors.bottomNav} backdrop-blur-xl border ${colors.border} rounded-[2rem] z-[60] shadow-xl transition-all duration-300 ${isNavOpen ? 'h-[130px]' : 'h-14'}`}
+                        >
+                            <div className="w-full h-14 flex flex-col justify-center items-center cursor-pointer" onTouchStart={handleNavTouchStart} onTouchMove={handleNavTouchMove} onTouchEnd={handleNavTouchEnd} onClick={handleNavClick}>
+                                <div className="w-12 h-1.5 rounded-full bg-stone-300 dark:bg-stone-700 mb-1 pointer-events-none"></div>
+                                <i className={`ph-bold ${isNavOpen ? 'ph-caret-down' : 'ph-caret-up'} opacity-30 pointer-events-none`}></i>
+                            </div>
+                            <div className={`w-full h-full flex justify-around items-center pt-8 px-4 transition-opacity ${isNavOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                <button onClick={() => { setActiveTab('home'); setIsNavOpen(false); }} className={activeTab === 'home' ? 'text-stone-800 dark:text-white font-bold' : 'opacity-40'}><i className="ph-fill ph-hand-heart text-2xl"></i></button>
+                                <button onClick={() => { setActiveTab('calendar'); setIsNavOpen(false); }} className={activeTab === 'calendar' ? 'text-stone-800 dark:text-white font-bold' : 'opacity-40'}><i className="ph-fill ph-calendar text-2xl"></i></button>
+                                <button onClick={() => { setActiveTab('stats'); setIsNavOpen(false); }} className={activeTab === 'stats' ? 'text-stone-800 dark:text-white font-bold' : 'opacity-40'}><i className="ph-fill ph-sparkle text-2xl"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="absolute top-4 w-full px-4 z-50 flex flex-col gap-2 max-w-md mx-auto left-1/2 -translate-x-1/2">
+                        {notifications.map(n => <div key={n.id} className={`${colors.notification} p-4 rounded-2xl flex items-center shadow-lg border animate-in`}><i className="ph-fill ph-check-circle text-green-500 mr-2"></i><p className="font-bold text-sm">{n.msg}</p></div>)}
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
